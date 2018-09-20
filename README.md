@@ -168,7 +168,7 @@ Full thread dump OpenJDK 64-Bit Server VM (25.152-b8 mixed mode):
 	- locked <0x00000000e0cd9e98> (a java.lang.ref.ReferenceQueue$Lock)
 	at java.lang.ref.ReferenceQueue.remove(ReferenceQueue.java:164)
 	at java.lang.ref.Finalizer$FinalizerThread.run(Finalizer.java:209)
-
+Reference Handler
    Locked ownable synchronizers:
 	- None
 
@@ -201,7 +201,7 @@ JNI global references: 7414
 ```
 
 
-There can be following thread states ::
+There can be following thread states :
 
 * NEW: The thread is created but has not been processed yet.
 * RUNNABLE: The thread is occupying the CPU and processing a task. (It may be in WAITING status due to the OS's resource distribution.)
@@ -209,7 +209,64 @@ There can be following thread states ::
 * WAITING: The thread is waiting by using a wait, join or park method.
 * TIMED_WAITING: The thread is waiting by using a sleep, wait, join or park method. (The difference from WAITING is that the maximum waiting time is specified by the method parameter, and WAITING can be relieved by time as well as external changes.) 
 
+A thread has five components :
+* Thread Name: It is the name of the thread, for example, in the last thread in above thread dump, the thread name is 'Reference Handler';
+* Priority: It is the priority of the string. Lst thread in above example has priority 10.
+* Thread ID: It is the ID of the thread. Last thread has tid = 0x00007fc1e8143000.
+* Thread Status: It represents the status of the thread. Last thread has status "WAITING".
+* Thread callstack: It is the call stack info of the thread.
 
+# Important things to look in a thread stack trace
+
+One of the important things to look into threads is the status of the thread. If it is blocked, it may lead to deadlock.
+
+Following is an example of deadlock threads.
+
+```
+"Java2D Disposer" #12 daemon prio=10 os_prio=0 tid=0x00007fc190085000 nid=0x25b7 in Object.wait() [0x00007fc1c812f000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at java.lang.Object.wait(Native Method)
+	at java.lang.ref.ReferenceQueue.remove(ReferenceQueue.java:143)
+	- waiting to lock <0x00007fc1c952c000> (a java.lang.ref.ReferenceQueue$Lock)
+	at java.lang.ref.ReferenceQueue.remove(ReferenceQueue.java:143)
+	- locked <0x00007fc1c942b000> (a java.lang.ref.ReferenceQueue$Lock)
+	at java.lang.ref.ReferenceQueue.remove(ReferenceQueue.java:164)
+	at sun.java2d.Disposer.run(Disposer.java:148)
+	at java.lang.Thread.run(Thread.java:745)
+
+   Locked ownable synchronizers:
+	- None
+
+"Finalizer" #3 daemon prio=8 os_prio=0 tid=0x00007fc1e8143000 nid=0x25ae in Object.wait() [0x00007fc1c942b000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at java.lang.Object.wait(Native Method)
+	at java.lang.ref.ReferenceQueue.remove(ReferenceQueue.java:143)
+	- waiting to lock <0x00007fc1c812f000> (a java.lang.ref.ReferenceQueue$Lock)
+	at java.lang.ref.ReferenceQueue.remove(ReferenceQueue.java:143)
+	- locked <0x00007fc1c952c000> (a java.lang.ref.ReferenceQueue$Lock)
+	at java.lang.ref.ReferenceQueue.remove(ReferenceQueue.java:164)
+	at java.lang.ref.Finalizer$FinalizerThread.run(Finalizer.java:209)
+Reference Handler
+   Locked ownable synchronizers:
+	- None
+
+"Reference Handler" #2 daemon prio=10 os_prio=0 tid=0x00007fc1e813e800 nid=0x25ad in Object.wait() [0x00007fc1c952c000]
+   java.lang.Thread.State: BLOCKED (on object monitor)
+	at java.lang.Object.wait(Native Method)
+	at java.lang.Object.wait(Object.java:502)
+	at java.lang.ref.ReferenceQueue.remove(ReferenceQueue.java:143)
+	- waiting to lock <0x00007fc1c942b000> (a java.lang.ref.ReferenceQueue$Lock)
+	at java.lang.ref.Reference.tryHandlePending(Reference.java:191)
+	- locked <0x00007fc1c812f000> (a java.lang.ref.Reference$Lock)
+	at java.lang.ref.Reference$ReferenceHandler.run(Reference.java:153)
+
+   Locked ownable synchronizers:
+	- None
+```
+
+In the above example you can see that, thread "Java2D Disposer" ,having tid = [0x00007fc1c812f000], is in waiting state and waiting for the thread 
+"Finalizer", having tid = [0x00007fc1c942b000] to release its lock. Further thread "Finalizer" is waiting thread "Reference Handler" having tid = 
+[0x00007fc1c952c000] to release its lock. Thread "Reference Handler" is waiting for thread "Java2D Disposer" to release its lock. Hence all the three threads are in a deadlock situation.
 
 [Thread Analysis](https://dzone.com/articles/how-analyze-java-thread-dumps)
 
