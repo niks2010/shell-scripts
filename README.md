@@ -211,5 +211,5 @@ There can be following thread states ::
 
 
 
-[Thread Analysis] (https://dzone.com/articles/how-analyze-java-thread-dumps)
+[Thread Analysis](https://dzone.com/articles/how-analyze-java-thread-dumps)
 
